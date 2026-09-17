@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep-Sea Rescue: Circuit Path</title>
+<style>
+  :root {
+    --bg: #0a2540;
+    --bg2: #0e3a63;
+    --panel: #0f3057;
+    --text: #eaf6ff;
+    --muted: #9fc9e8;
+    --accent: #ffd166;
+    --conductor: #4ea8de;
+    --conductor-dark: #2f7ec2;
+    --insulator: #6b7280;
+    --insulator-dark: #4b5563;
+    --good: #4ade80;
+    --bad: #f87171;
+    --wire: #ffd166;
+    --card: #123a63;
+  }
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #eaf6ff;
+    --bg2: #d7ecfa;
+    --panel: #ffffff;
+    --text: #0a2540;
+    --muted: #3d6a8c;
+    --card: #f0f8ff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #eaf6ff;
+      --bg2: #d7ecfa;
+      --panel: #ffffff;
+      --text: #0a2540;
+      --muted: #3d6a8c;
+      --card: #f0f8ff;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, var(--bg2), var(--bg));
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 16px;
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: clamp(1.3rem, 4vw, 2rem);
+    margin: 4px 0 2px;
+    color: var(--accent);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 10px 16px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+
+  .status-item {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .status-item b {
+    color: var(--text);
+    font-size: 1.05rem;
+  }
+
+  .board {
+    display: grid;
+    gap: 6px;
+    background: var(--panel);
+    padding: 12px;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    position: relative;
+    touch-action: manipulation;
+  }
+
+  .tile {
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    cursor: pointer;
+    border: 3px solid transparent;
+    background: var(--card);
+    position: relative;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .tile:active { transform: scale(0.93); }
+
+  .tile.start {
+    background: linear-gradient(160deg, #ffd166, #f59e0b);
+    box-shadow: 0 0 18px rgba(255,209,102,0.6);
+  }
+  .tile.goal {
+    background: linear-gradient(160deg, #ff8fa3, #ef476f);
+    box-shadow: 0 0 18px rgba(239,71,111,0.5);
+  }
+  .tile.goal.rescued {
+    background: linear-gradient(160deg, #4ade80, #16a34a);
+    box-shadow: 0 0 24px rgba(74,222,128,0.8);
+  }
+
+  .tile.selected {
+    border-color: var(--wire);
+    box-shadow: 0 0 14px rgba(255,209,102,0.7), inset 0 0 0 2px var(--wire);
+  }
+  .tile.selected.conductor {
+    background: linear-gradient(160deg, var(--conductor), var(--conductor-dark));
+  }
+  .tile.selected.insulator {
+    background: linear-gradient(160deg, var(--bad), #b91c1c);
+    animation: shake 0.35s;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .tile-label {
+    position: absolute;
+    bottom: 2px;
+    font-size: 0.5rem;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    width: 100%;
+    line-height: 1;
+    pointer-events: none;
+  }
+  :root[data-theme="light"] .tile-label {
+    color: rgba(10,37,64,0.6);
+  }
+  @media (prefers-color-scheme: light) {
+    .tile-label {
+      color: rgba(10,37,64,0.6);
+    }
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    color: #08213a;
+    background: var(--accent);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: transform 0.1s ease;
+  }
+  button:active { transform: scale(0.96); }
+  button.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 2px solid var(--muted);
+  }
+
+  .banner {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-top: 14px;
+    min-height: 1.6em;
+    color: var(--accent);
+  }
+  .banner.success { color: var(--good); }
+  .banner.fail { color: var(--bad); }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .dot {
+    width: 14px; height: 14px; border-radius: 4px; display: inline-block;
+  }
+  .dot.c { background: linear-gradient(160deg, var(--conductor), var(--conductor-dark)); }
+  .dot.i { background: var(--insulator); }
+
+  .confetti {
+    position: fixed;
+    top: -20px;
+    font-size: 1.4rem;
+    animation: fall linear forwards;
+    pointer-events: none;
+    z-index: 999;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(360deg); opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌊 Deep-Sea Rescue: Circuit Path 🔦</h1>
+  <p class="subtitle">Tap conductor tiles to wire a path from the battery to the trapped rescue bot!</p>
+
+  <div class="status-bar">
+    <div class="status-item">Level <b id="levelNum">1</b></div>
+    <div class="status-item">Rescues <b id="rescueCount">0</b></div>
+    <div class="status-item">Mistakes <b id="mistakeCount">0</b></div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="banner" id="banner">Find a path using only conductors!</div>
+
+  <div class="controls">
+    <button id="resetBtn">🔄 Reset Path</button>
+    <button id="newLevelBtn" class="secondary">🎲 New Level</button>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot c"></span> Conductor (metal, foil, water)</span>
+    <span><span class="dot i"></span> Insulator (rubber, plastic, wood)</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  const GRID = 6;
+  const CONDUCTORS = ["🔩", "🥄", "🪙", "🔑", "🥫", "📎"];
+  const INSULATORS = ["🧤", "🪵", "🎈", "📏", "🧽", "🧦"];
+
+  let grid = [];
+  let startPos, goalPos;
+  let selectedPath = [];
+  let level = 1;
+  let rescues = 0;
+  let mistakes = 0;
+  let solved = false;
+
+  const boardEl = document.getElementById("board");
+  const bannerEl = document.getElementById("banner");
+  const levelNumEl = document.getElementById("levelNum");
+  const rescueCountEl = document.getElementById("rescueCount");
+  const mistakeCountEl = document.getElementById("mistakeCount");
+
+  function key(r, c) { return r + "," + c; }
+
+  function randInt(n) { return Math.floor(Math.random() * n); }
+
+  function manhattan(a, b) {
+    return Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
+  }
+
+  function generateLevel() {
+    grid = [];
+    for (let r = 0; r < GRID; r++) {
+      const row = [];
+      for (let c = 0; c < GRID; c++) {
+        row.push({ type: "insulator", icon: INSULATORS[randInt(INSULATORS.length)] });
+      }
+      grid.push(row);
+    }
+
+    // pick start (left-ish) and goal (right-ish), far enough apart
+    startPos = { r: randInt(GRID), c: randInt(2) };
+    goalPos = { r: randInt(GRID), c: GRID - 1 - randInt(2) };
+    while (manhattan(startPos, goalPos) < GRID) {
+      goalPos = { r: randInt(GRID), c: GRID - 1 - randInt(2) };
+    }
+
+    // carve a guaranteed conductor path from start to goal (random walk toward goal)
+    let cur = { r: startPos.r, c: startPos.c };
+    const path = [cur];
+    let guard = 0;
+    while ((cur.r !== goalPos.r || cur.c !== goalPos.c) && guard < 200) {
+      guard++;
+      const options = [];
+      if (cur.r !== goalPos.r) options.push({ r: cur.r + Math.sign(goalPos.r - cur.r), c: cur.c });
+      if (cur.c !== goalPos.c) options.push({ r: cur.r, c: cur.c + Math.sign(goalPos.c - cur.c) });
+      // small chance to wiggle sideways for a less straight path
+      if (Math.random() < 0.3) {
+        const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+        const [dr, dc] = dirs[randInt(dirs.length)];
+        const nr = cur.r + dr, nc = cur.c + dc;
+        if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID) options.push({ r: nr, c: nc });
+      }
+      const next = options[randInt(options.length)];
+      cur = next;
+      path.push(cur);
+    }
+
+    path.forEach(p => {
+      grid[p.r][p.c] = { type: "conductor", icon: CONDUCTORS[randInt(CONDUCTORS.length)] };
+    });
+
+    // sprinkle a few extra conductors randomly for variety / alternate paths
+    const extra = Math.floor(GRID * GRID * 0.15);
+    for (let i = 0; i < extra; i++) {
+      const r = randInt(GRID), c = randInt(GRID);
+      grid[r][c] = { type: "conductor", icon: CONDUCTORS[randInt(CONDUCTORS.length)] };
+    }
+
+    grid[startPos.r][startPos.c] = { type: "conductor", icon: "🔋", isStart: true };
+    grid[goalPos.r][goalPos.c] = { type: "conductor", icon: "🤖", isGoal: true };
+
+    selectedPath = [key(startPos.r, startPos.c)];
+    solved = false;
+  }
+
+  function render() {
+    boardEl.style.gridTemplateColumns = `repeat(${GRID}, 1fr)`;
+    boardEl.innerHTML = "";
+    for (let r = 0; r < GRID; r++) {
+      for (let c = 0; c < GRID; c++) {
+        const cell = grid[r][c];
+        const div = document.createElement("div");
+        div.className = "tile " + cell.type;
+        if (cell.isStart) div.classList.add("start");
+        if (cell.isGoal) div.classList.add("goal");
+        if (solved && cell.isGoal) div.classList.add("rescued");
+        if (selectedPath.includes(key(r, c))) div.classList.add("selected");
+
+        div.innerHTML = `<span>${cell.icon}</span>`;
+        div.addEventListener("click", () => handleTileClick(r, c));
+        boardEl.appendChild(div);
+      }
+    }
+    levelNumEl.textContent = level;
+    rescueCountEl.textContent = rescues;
+    mistakeCountEl.textContent = mistakes;
+  }
+
+  function isAdjacent(a, b) {
+    return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
+  }
+
+  function handleTileClick(r, c) {
+    if (solved) return;
+    const cellKey = key(r, c);
+    const cell = grid[r][c];
+    const lastKey = selectedPath[selectedPath.length - 1];
+    const [lr, lc] = lastKey.split(",").map(Number);
+
+    // allow backtracking by clicking the previous tile in path
+    if (selectedPath.length > 1 && selectedPath[selectedPath.length - 2] === cellKey) {
+      selectedPath.pop();
+      render();
+      setBanner("Backed up. Keep wiring toward the rescue bot!", "");
+      return;
+    }
+
+    if (cellKey === lastKey) return; // clicking current tile does nothing
+
+    if (!isAdjacent({ r: lr, c: lc }, { r, c })) {
+      flashInvalid(r, c, "Wires must connect to the tile right next to your last one!");
+      return;
+    }
+
+    if (cell.type !== "conductor") {
+      mistakes++;
+      flashInvalid(r, c, "⚡ That's an insulator — the signal can't pass through!");
+      return;
+    }
+
+    if (selectedPath.includes(cellKey)) {
+      flashInvalid(r, c, "Already used that tile in your path!");
+      return;
+    }
+
+    selectedPath.push(cellKey);
+    render();
+
+    if (cell.isGoal) {
+      solved = true;
+      rescues++;
+      render();
+      celebrate();
+      setBanner("🎉 Circuit complete! The rescue bot is powered up and saved!", "success");
+    } else {
+      setBanner("Current flowing... keep going!", "");
+    }
+  }
+
+  function flashInvalid(r, c, msg) {
+    const idx = r * GRID + c;
+    const tileEl = boardEl.children[idx];
+    tileEl.classList.add("insulator", "selected");
+    setBanner(msg, "fail");
+    setTimeout(() => {
+      tileEl.classList.remove("selected");
+      render();
+    }, 400);
+    render();
+    tileEl.classList.add("insulator", "selected"); // re-apply after render race
+    mistakeCountEl.textContent = mistakes;
+  }
+
+  function setBanner(text, cls) {
+    bannerEl.textContent = text;
+    bannerEl.className = "banner" + (cls ? " " + cls : "");
+  }
+
+  function celebrate() {
+    const emojis = ["🎉", "✨", "🎊", "💡", "🌟"];
+    for (let i = 0; i < 24; i++) {
+      const span = document.createElement("span");
+      span.className = "confetti";
+      span.textContent = emojis[randInt(emojis.length)];
+      span.style.left = Math.random() * 100 + "vw";
+      span.style.animationDuration = (1.5 + Math.random() * 1.5) + "s";
+      span.style.fontSize = (1 + Math.random()) + "rem";
+      document.body.appendChild(span);
+      setTimeout(() => span.remove(), 3200);
+    }
+  }
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    selectedPath = [key(startPos.r, startPos.c)];
+    solved = false;
+    setBanner("Path reset. Try again!", "");
+    render();
+  });
+
+  document.getElementById("newLevelBtn").addEventListener("click", () => {
+    level++;
+    generateLevel();
+    setBanner("New maze! Find a path using only conductors!", "");
+    render();
+  });
+
+  generateLevel();
+  render();
+})();
+</script>
+</body>
+</html>
