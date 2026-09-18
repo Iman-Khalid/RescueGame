@@ -49,7 +49,7 @@
     margin: 0;
     background: radial-gradient(ellipse at top, var(--bg2), var(--bg));
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif;
     min-height: 100vh;
     padding: 16px;
     overflow-x: hidden;
@@ -170,9 +170,7 @@
     color: rgba(10,37,64,0.6);
   }
   @media (prefers-color-scheme: light) {
-    .tile-label {
-      color: rgba(10,37,64,0.6);
-    }
+    .tile-label { color: rgba(10,37,64,0.6); }
   }
 
   .controls {
@@ -271,8 +269,8 @@
 <script>
 (function () {
   const GRID = 6;
-  const CONDUCTORS = ["🔩", "🥄", "🪙", "🔑", "🥫", "📎"];
-  const INSULATORS = ["🧤", "🪵", "🎈", "📏", "🧽", "🧦"];
+  const CONDUCTORS = ["🔩", "🥄", "🔑", "📎", "🔔", "🥫"];
+  const INSULATORS = ["🎈", "📏", "📦", "👟", "🖍", "🍬"];
 
   let grid = [];
   let startPos, goalPos;
@@ -306,14 +304,12 @@
       grid.push(row);
     }
 
-    // pick start (left-ish) and goal (right-ish), far enough apart
     startPos = { r: randInt(GRID), c: randInt(2) };
     goalPos = { r: randInt(GRID), c: GRID - 1 - randInt(2) };
     while (manhattan(startPos, goalPos) < GRID) {
       goalPos = { r: randInt(GRID), c: GRID - 1 - randInt(2) };
     }
 
-    // carve a guaranteed conductor path from start to goal (random walk toward goal)
     let cur = { r: startPos.r, c: startPos.c };
     const path = [cur];
     let guard = 0;
@@ -322,7 +318,6 @@
       const options = [];
       if (cur.r !== goalPos.r) options.push({ r: cur.r + Math.sign(goalPos.r - cur.r), c: cur.c });
       if (cur.c !== goalPos.c) options.push({ r: cur.r, c: cur.c + Math.sign(goalPos.c - cur.c) });
-      // small chance to wiggle sideways for a less straight path
       if (Math.random() < 0.3) {
         const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
         const [dr, dc] = dirs[randInt(dirs.length)];
@@ -338,7 +333,6 @@
       grid[p.r][p.c] = { type: "conductor", icon: CONDUCTORS[randInt(CONDUCTORS.length)] };
     });
 
-    // sprinkle a few extra conductors randomly for variety / alternate paths
     const extra = Math.floor(GRID * GRID * 0.15);
     for (let i = 0; i < extra; i++) {
       const r = randInt(GRID), c = randInt(GRID);
@@ -386,7 +380,6 @@
     const lastKey = selectedPath[selectedPath.length - 1];
     const [lr, lc] = lastKey.split(",").map(Number);
 
-    // allow backtracking by clicking the previous tile in path
     if (selectedPath.length > 1 && selectedPath[selectedPath.length - 2] === cellKey) {
       selectedPath.pop();
       render();
@@ -394,7 +387,7 @@
       return;
     }
 
-    if (cellKey === lastKey) return; // clicking current tile does nothing
+    if (cellKey === lastKey) return;
 
     if (!isAdjacent({ r: lr, c: lc }, { r, c })) {
       flashInvalid(r, c, "Wires must connect to the tile right next to your last one!");
@@ -436,7 +429,7 @@
       render();
     }, 400);
     render();
-    tileEl.classList.add("insulator", "selected"); // re-apply after render race
+    tileEl.classList.add("insulator", "selected");
     mistakeCountEl.textContent = mistakes;
   }
 

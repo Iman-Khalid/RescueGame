@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Repair Shop</title>
+<style>
+  :root {
+    --bg: #1a1030;
+    --bg2: #2a1a4d;
+    --panel: #241a42;
+    --text: #f3ecff;
+    --muted: #b7a4dd;
+    --accent: #ffd166;
+    --good: #4ade80;
+    --bad: #f87171;
+    --card: #30224f;
+    --btn: #3d2c66;
+  }
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+  :root[data-theme="light"] {
+    --bg: #f3ecff; --bg2: #e6d9fb; --panel: #ffffff; --text: #1a1030; --muted: #6b5a94; --card: #f3edff; --btn: #ede4ff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f3ecff; --bg2: #e6d9fb; --panel: #ffffff; --text: #1a1030; --muted: #6b5a94; --card: #f3edff; --btn: #ede4ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, var(--bg2), var(--bg));
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 16px;
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 {
+    text-align: center;
+    font-size: clamp(1.3rem, 4vw, 2rem);
+    margin: 4px 0 2px;
+    color: var(--accent);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .subtitle { text-align: center; color: var(--muted); margin: 0 0 14px; font-size: 0.95rem; }
+
+  .status-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel); border-radius: 14px; padding: 10px 16px; margin-bottom: 14px;
+    flex-wrap: wrap; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .status-item { font-size: 0.9rem; color: var(--muted); }
+  .status-item b { color: var(--text); font-size: 1.05rem; }
+
+  .shop {
+    background: var(--panel);
+    border-radius: 20px;
+    padding: 22px 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    text-align: center;
+  }
+
+  .robot-stage {
+    font-size: clamp(4rem, 16vw, 6rem);
+    margin: 6px 0 10px;
+    display: inline-block;
+    position: relative;
+    transition: transform 0.2s ease;
+  }
+  .robot-stage.broken { animation: wobble 1.4s ease-in-out infinite; }
+  .robot-stage.fixed { animation: bounce 0.6s ease; filter: drop-shadow(0 0 18px rgba(74,222,128,0.7)); }
+  .robot-stage.shake { animation: shake 0.4s; }
+
+  @keyframes wobble {
+    0%, 100% { transform: rotate(-2deg); }
+    50% { transform: rotate(2deg); }
+  }
+  @keyframes bounce {
+    0% { transform: scale(0.8); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+
+  .problem-badge {
+    display: inline-block;
+    background: rgba(248,113,113,0.15);
+    color: var(--bad);
+    border: 2px solid var(--bad);
+    border-radius: 999px;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .problem-badge.fixed {
+    background: rgba(74,222,128,0.15);
+    color: var(--good);
+    border-color: var(--good);
+  }
+
+  .problem-text {
+    font-size: 1.05rem;
+    margin: 6px 0 18px;
+    line-height: 1.4;
+  }
+
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 480px) {
+    .options { grid-template-columns: 1fr; }
+  }
+
+  .option-btn {
+    background: var(--btn);
+    color: var(--text);
+    border: 2px solid transparent;
+    border-radius: 14px;
+    padding: 14px 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s ease, border-color 0.2s ease, background 0.2s ease;
+    text-align: left;
+  }
+  .option-btn:active { transform: scale(0.97); }
+  .option-btn.correct {
+    background: linear-gradient(160deg, #4ade80, #16a34a);
+    color: #06280f;
+    border-color: #16a34a;
+  }
+  .option-btn.incorrect {
+    background: linear-gradient(160deg, #f87171, #b91c1c);
+    color: #2b0505;
+    border-color: #b91c1c;
+    animation: shake 0.4s;
+  }
+  .option-btn:disabled { cursor: default; }
+
+  .controls { display: flex; gap: 10px; margin-top: 18px; justify-content: center; flex-wrap: wrap; }
+  button.next-btn {
+    font-size: 1rem; font-weight: 700; padding: 12px 26px; border-radius: 999px; border: none;
+    cursor: pointer; color: #08213a; background: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: transform 0.1s ease, opacity 0.2s ease;
+  }
+  button.next-btn:active { transform: scale(0.96); }
+  button.next-btn:disabled { opacity: 0.35; cursor: default; }
+
+  button.restart-btn {
+    font-size: 0.95rem; font-weight: 600; padding: 10px 20px; border-radius: 999px;
+    background: transparent; color: var(--text); border: 2px solid var(--muted); cursor: pointer;
+  }
+
+  .banner { text-align: center; font-size: 1.05rem; font-weight: 700; margin-top: 16px; min-height: 1.6em; color: var(--accent); }
+  .banner.success { color: var(--good); }
+
+  .finale {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--good);
+    margin-top: 10px;
+  }
+
+  .confetti { position: fixed; top: -20px; font-size: 1.4rem; animation: fall linear forwards; pointer-events: none; z-index: 999; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(360deg); opacity: 0.3; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔧 Robot Repair Shop 🤖</h1>
+  <p class="subtitle">A robot rolls in broken. Find the right fix to send it back out working!</p>
+
+  <div class="status-bar">
+    <div class="status-item">Robot <b id="roundNum">1</b> / <b id="totalRounds">10</b></div>
+    <div class="status-item">Fixed <b id="fixedCount">0</b></div>
+    <div class="status-item">Mistakes <b id="mistakeCount">0</b></div>
+  </div>
+
+  <div class="shop">
+    <div class="robot-stage broken" id="robotStage">🤖</div>
+    <div>
+      <span class="problem-badge" id="problemBadge">BROKEN</span>
+    </div>
+    <div class="problem-text" id="problemText">Loading...</div>
+    <div class="options" id="options"></div>
+    <div class="controls">
+      <button class="next-btn" id="nextBtn" disabled>Next Robot ▶</button>
+      <button class="restart-btn" id="restartBtn">🔄 Restart Shop</button>
+    </div>
+  </div>
+
+  <div class="banner" id="banner"></div>
+</div>
+
+<script>
+(function () {
+  const rounds = [
+    {
+      problem: "This robot's flashlight arm won't light up. There's a gap in the wire loop!",
+      options: ["Reconnect the wire so the loop is complete", "Paint the arm a brighter color", "Give the robot a hug", "Turn up the music"],
+      correct: 0
+    },
+    {
+      problem: "Someone wired a rubber glove into this robot's circuit by mistake, and now it won't move.",
+      options: ["Add a bigger hat", "Replace the glove with a metal wire", "Feed it a snack", "Flip it upside down"],
+      correct: 1
+    },
+    {
+      problem: "This robot's eyes (LEDs) are dim and barely glowing.",
+      options: ["Draw brighter eyes with a marker", "Add a bow on its head", "Swap in a fresh battery", "Yell at it to wake up"],
+      correct: 2
+    },
+    {
+      problem: "This robot's switch is stuck, so the circuit never fully closes.",
+      options: ["Remove its wheels", "Sing it a lullaby", "Add sparkly stickers", "Fix or replace the stuck switch"],
+      correct: 3
+    },
+    {
+      problem: "Someone used a wooden stick instead of a wire to connect two parts.",
+      options: ["Swap the wood for a metal wire", "Add sunglasses", "Plug in some headphones", "Add glitter to the stick"],
+      correct: 0
+    },
+    {
+      problem: "This robot's arm circuit is completely missing its battery!",
+      options: ["Draw a smiley face on it", "Insert a battery", "Attach a little flag", "Play it a video"],
+      correct: 1
+    },
+    {
+      problem: "This robot's alarm won't buzz because two wires are crossed and touching where they shouldn't (a short circuit)!",
+      options: ["Paint it bright red", "Give it roller skates", "Re-route the wires so they don't touch", "Add a cape"],
+      correct: 2
+    },
+    {
+      problem: "This robot's foot sensor uses a plastic connector instead of metal, so no signal gets through.",
+      options: ["Attach a balloon to it", "Play it a video", "Add glitter to its feet", "Replace the plastic with a metal conductor"],
+      correct: 3
+    },
+    {
+      problem: "This robot's wires have no protective coating, so touching them could give someone a shock!",
+      options: ["Add rubber or plastic coating around the wires", "Remove its battery completely", "Give it new wheels", "Paint it blue"],
+      correct: 0
+    },
+    {
+      problem: "Uh oh — double trouble! This robot has BOTH a gap in its wire AND a dead battery.",
+      options: ["Just paint it shiny and hope for the best", "Give it a nap", "Fix the wire gap and put in a fresh battery", "Add a hat and a bowtie"],
+      correct: 2
+    }
+  ];
+
+  let roundIndex = 0;
+  let fixedCount = 0;
+  let mistakes = 0;
+  let answered = false;
+
+  const robotStage = document.getElementById("robotStage");
+  const problemBadge = document.getElementById("problemBadge");
+  const problemText = document.getElementById("problemText");
+  const optionsEl = document.getElementById("options");
+  const nextBtn = document.getElementById("nextBtn");
+  const restartBtn = document.getElementById("restartBtn");
+  const bannerEl = document.getElementById("banner");
+  const roundNumEl = document.getElementById("roundNum");
+  const totalRoundsEl = document.getElementById("totalRounds");
+  const fixedCountEl = document.getElementById("fixedCount");
+  const mistakeCountEl = document.getElementById("mistakeCount");
+
+  totalRoundsEl.textContent = rounds.length;
+
+  function loadRound() {
+    answered = false;
+    nextBtn.disabled = true;
+    const r = rounds[roundIndex];
+    robotStage.className = "robot-stage broken";
+    robotStage.textContent = "🤖";
+    problemBadge.textContent = "BROKEN";
+    problemBadge.className = "problem-badge";
+    problemText.textContent = r.problem;
+    bannerEl.textContent = "";
+    bannerEl.className = "banner";
+
+    optionsEl.innerHTML = "";
+    r.options.forEach((opt, i) => {
+      const btn = document.createElement("button");
+      btn.className = "option-btn";
+      btn.textContent = opt;
+      btn.addEventListener("click", () => handleAnswer(i, btn));
+      optionsEl.appendChild(btn);
+    });
+
+    roundNumEl.textContent = roundIndex + 1;
+    fixedCountEl.textContent = fixedCount;
+    mistakeCountEl.textContent = mistakes;
+  }
+
+  function handleAnswer(i, btnEl) {
+    if (answered) return;
+    const r = rounds[roundIndex];
+    if (i === r.correct) {
+      answered = true;
+      btnEl.classList.add("correct");
+      Array.from(optionsEl.children).forEach(b => b.disabled = true);
+      fixedCount++;
+      fixedCountEl.textContent = fixedCount;
+      robotStage.className = "robot-stage fixed";
+      robotStage.textContent = "🤖✨";
+      problemBadge.textContent = "FIXED!";
+      problemBadge.className = "problem-badge fixed";
+      setBanner("Great fix! That robot is good as new.", "success");
+      spawnConfetti(12, ["🔧", "✨", "💡"]);
+      nextBtn.disabled = false;
+    } else {
+      mistakes++;
+      mistakeCountEl.textContent = mistakes;
+      btnEl.classList.add("incorrect");
+      robotStage.classList.add("shake");
+      setBanner("Not quite the fix — give it another try!", "");
+      setTimeout(() => {
+        btnEl.classList.remove("incorrect");
+        robotStage.classList.remove("shake");
+      }, 400);
+    }
+  }
+
+  function setBanner(text, cls) {
+    bannerEl.textContent = text;
+    bannerEl.className = "banner" + (cls ? " " + cls : "");
+  }
+
+  function spawnConfetti(count, emojis) {
+    for (let i = 0; i < count; i++) {
+      const span = document.createElement("span");
+      span.className = "confetti";
+      span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      span.style.left = Math.random() * 100 + "vw";
+      span.style.animationDuration = (1.5 + Math.random() * 1.5) + "s";
+      span.style.fontSize = (1 + Math.random()) + "rem";
+      document.body.appendChild(span);
+      setTimeout(() => span.remove(), 3200);
+    }
+  }
+
+  nextBtn.addEventListener("click", () => {
+    roundIndex++;
+    if (roundIndex >= rounds.length) {
+      finishGame();
+    } else {
+      loadRound();
+    }
+  });
+
+  restartBtn.addEventListener("click", () => {
+    roundIndex = 0;
+    fixedCount = 0;
+    mistakes = 0;
+    loadRound();
+  });
+
+  function finishGame() {
+    problemBadge.textContent = "SHOP COMPLETE!";
+    problemBadge.className = "problem-badge fixed";
+    robotStage.className = "robot-stage fixed";
+    robotStage.textContent = "🤖🎉";
+    problemText.innerHTML = `<div class="finale">You fixed all ${rounds.length} robots! Every circuit is complete and working perfectly.</div>`;
+    optionsEl.innerHTML = "";
+    nextBtn.disabled = true;
+    setBanner(`Total mistakes: ${mistakes}. Great job, engineer!`, "success");
+    spawnConfetti(30, ["🎉", "🔧", "✨", "🎊", "🤖"]);
+  }
+
+  loadRound();
+})();
+</script>
+</body>
+</html>
